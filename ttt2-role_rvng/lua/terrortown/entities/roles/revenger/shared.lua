@@ -4,7 +4,7 @@ if SERVER then
 end
 
 function ROLE:PreInitialize()
-  self.color = Color(0, 197, 92, 255)
+  self.color = Color(255, 144, 214, 255)
 
   self.abbr = "rvng" -- abbreviation
   self.surviveBonus = 0 -- bonus multiplier for every survive while another player was killed
@@ -31,14 +31,42 @@ function ROLE:Initialize()
   roles.SetBaseRole(self, ROLE_INNOCENT)
 end
 
-
+-- local variables that are very important
+local loverPly, revengerPly, loverKiller
 
 if SERVER then
-	-- Give Loadout on respawn and rolechange
+	-- Do stuff on respawn and rolechange
 	function ROLE:GiveRoleLoadout(ply, isRoleChange)
+    -- find a random innocent player
+    local randomPlyNumber = math.random(#(roles.GetTeamMembers(TEAM_INNOCENT)))
+    -- iterate through players
+    for k, v in pairs(roles.GetTeamMembers(TEAM_INNOCENT)) do
+      -- find our love target
+      if k == randomPlyNumber then
+        loverPly = v
+        print("Randomly selected player: " .. loverPly:Nick())
+      end
+      -- find the revenger
+      if v:GetSubRole() == ROLE_REVENGER then
+        revengerPly = v
+        print("Revenger is: " .. revengerPly:Nick())
+      end
+		end
+
+    -- tell revenger who they are in love with
+    EPOP:AddMessage(revengerPly, "You are in love with " .. loverPly:Nick(), "If someone kills them, you will track their location!", 6, true)
 	end
 
-	-- Remove Loadout on death and rolechange
+	-- Do stuff on death and rolechange
 	function ROLE:RemoveRoleLoadout(ply, isRoleChange)
 	end
+
+  -- Check if the player who died is our lover boy
+	hook.Add("TTTOnCorpseCreated", "RevengerAddedDeadBody", function(rag, ply)
+		if not IsValid(rag) or not IsValid(ply) then return end
+
+		if ply == loverPly then
+      EPOP:AddMessage(revengerPly, "Your love, " .. loverPly:Nick() .. ", has died.", "Why didn't you protect them? :(", 6, true)
+    end
+	end)
 end
