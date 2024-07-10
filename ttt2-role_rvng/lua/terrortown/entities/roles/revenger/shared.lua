@@ -4,7 +4,7 @@ if SERVER then
 end
 
 function ROLE:PreInitialize()
-  self.color = Color(255, 144, 214, 255)
+  self.color = Color(255, 82, 191, 255)
 
   self.abbr = "rvng" -- abbreviation
   self.surviveBonus = 0 -- bonus multiplier for every survive while another player was killed
@@ -57,16 +57,26 @@ if SERVER then
     EPOP:AddMessage(revengerPly, "You are in love with " .. loverPly:Nick(), "If someone kills them, you will track their location!", 6, true)
 	end
 
-	-- Do stuff on death and rolechange
+  hook.Add("PlayerDeath", "RevengerGetKiller", function(victim, inflictor, attacker)
+    -- only print if the victim was our loverply
+    if victim ~= loverPly then return end
+    -- only print if attacker is human
+    if not IsValid(attacker) or not IsPlayer(attacker) then return end
+    -- update our loverKiller value
+    loverKiller = attacker
+    -- add a EPOP to the revengers screen
+    EPOP:AddMessage(revengerPly, "Your love, " .. loverPly:Nick() .. ", has died.", "They were killed by " .. loverKiller:Nick() .. "!!", 6, true)
+  end)
+
+  -- Reset stuff on death and rolechange and round end
 	function ROLE:RemoveRoleLoadout(ply, isRoleChange)
+    loverPly = nil
+    revengerPly = nil
+    loverKiller = nil
 	end
-
-  -- Check if the player who died is our lover boy
-	hook.Add("TTTOnCorpseCreated", "RevengerAddedDeadBody", function(rag, ply)
-		if not IsValid(rag) or not IsValid(ply) then return end
-
-		if ply == loverPly then
-      EPOP:AddMessage(revengerPly, "Your love, " .. loverPly:Nick() .. ", has died.", "Why didn't you protect them? :(", 6, true)
-    end
-	end)
+  hook.Add("TTTEndRound", "RevengerEndRound", function()
+    loverPly = nil
+    revengerPly = nil
+    loverKiller = nil
+  end)
 end
