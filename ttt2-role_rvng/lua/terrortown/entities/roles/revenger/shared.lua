@@ -4,7 +4,7 @@ if SERVER then
 end
 
 function ROLE:PreInitialize()
-  self.color = Color(232, 101, 255, 255)
+  self.color = Color(215, 1, 253, 255)
 
   self.abbr = "rvng" -- abbreviation
   self.surviveBonus = 0 -- bonus multiplier for every survive while another player was killed
@@ -37,19 +37,24 @@ local loverPly, revengerPly, loverKiller
 if SERVER then
 	-- Do stuff on respawn and rolechange
 	function ROLE:GiveRoleLoadout(ply, isRoleChange)
-    -- find a random innocent player
-    local randomPlyNumber = math.random(#(roles.GetTeamMembers(TEAM_INNOCENT)))
+    -- make a list of all innocent players minus the revenger
+    local innocentMinusRevengerList = roles.GetTeamMembers(TEAM_INNOCENT)
+    for k, v in pairs(innocentMinusRevengerList) do
+      if v:GetSubRole() == ROLE_REVENGER then
+        revengerPly = v
+        print("Revenger is: " .. revengerPly:Nick())
+        table.remove(innocentMinusRevengerList, k)
+      end
+    end
+
+    -- get a random index from our list
+    local randomPlyNumber = math.random(#innocentMinusRevengerList)
     -- iterate through players
-    for k, v in pairs(roles.GetTeamMembers(TEAM_INNOCENT)) do
+    for k, v in pairs(innocentMinusRevengerList) do
       -- find our love target
       if k == randomPlyNumber then
         loverPly = v
         print("Randomly selected player: " .. loverPly:Nick())
-      end
-      -- find the revenger
-      if v:GetSubRole() == ROLE_REVENGER then
-        revengerPly = v
-        print("Revenger is: " .. revengerPly:Nick())
       end
 		end
 
@@ -80,7 +85,6 @@ if SERVER then
 
   -- Reset stuff on death and rolechange and round begin/end
 	function ROLE:RemoveRoleLoadout(ply, isRoleChange)
-    if loverPly:Alive() then loverPly:RemoveMarkerVision("mv_revenger") end
     loverPly = nil
     revengerPly = nil
     loverKiller = nil
