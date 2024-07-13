@@ -4,7 +4,7 @@ if SERVER then
 end
 
 function ROLE:PreInitialize()
-  self.color = Color(255, 82, 191, 255)
+  self.color = Color(232, 101, 255, 255)
 
   self.abbr = "rvng" -- abbreviation
   self.surviveBonus = 0 -- bonus multiplier for every survive while another player was killed
@@ -54,8 +54,14 @@ if SERVER then
 		end
 
     -- tell revenger who they are in love with
-    EPOP:AddMessage(revengerPly, "You are in love with " .. loverPly:Nick(), "If someone kills them, you will track their location!", 6, true)
-	end
+    EPOP:AddMessage(revengerPly, {text = "You are in love with " .. loverPly:Nick(), color = REVENGER.color}, "If they are killed by another player, you will gain a damage bonus against their killer and learn their name.", 6, true)
+	
+    -- add marker vision to the lovey guy
+    local mvObject = loverPly:AddMarkerVision("mv_revenger")
+    mvObject:SetOwner(ROLE_REVENGER)
+    mvObject:SetVisibleFor(VISIBLE_FOR_ROLE)
+    mvObject:SyncToClients()
+  end
 
   hook.Add("PlayerDeath", "RevengerGetKiller", function(victim, inflictor, attacker)
     -- only print if the victim was our loverply
@@ -65,18 +71,72 @@ if SERVER then
     -- update our loverKiller value
     loverKiller = attacker
     -- add a EPOP to the revengers screen
-    EPOP:AddMessage(revengerPly, "Your love, " .. loverPly:Nick() .. ", has died.", "They were killed by " .. loverKiller:Nick() .. "!!", 6, true)
+    EPOP:AddMessage(revengerPly, {text = "Your love, " .. loverPly:Nick() .. ", has died.", color = REVENGER.color}, "They were killed by " .. loverKiller:Nick() .. "!! Go get revenge!", 6, true)
+    -- add a EPOP to the lover killers' screen
+    EPOP:AddMessage(loverKiller, {text = "You just broke the Revenger's Heart!", color = REVENGER.color}, revengerPly:Nick() .. " now does extra damage to you. Be careful!", 6, true)
+    -- remove wallhax
+    victim:RemoveMarkerVision("mv_revenger")
   end)
 
-  -- Reset stuff on death and rolechange and round end
+  -- Reset stuff on death and rolechange and round begin/end
 	function ROLE:RemoveRoleLoadout(ply, isRoleChange)
+    if loverPly:Alive() then loverPly:RemoveMarkerVision("mv_revenger") end
     loverPly = nil
     revengerPly = nil
     loverKiller = nil
 	end
-  hook.Add("TTTEndRound", "RevengerEndRound", function()
+  hook.Add("TTTBeginRound", "RevengerBeginRound", function()
     loverPly = nil
     revengerPly = nil
     loverKiller = nil
   end)
+  hook.Add("TTTEndRound", "RevengerEndRound", function()
+    loverPly:RemoveMarkerVision("mv_revenger")
+    loverPly = nil
+    revengerPly = nil
+    loverKiller = nil
+  end)
+
+  -- make revenger do extra damage to his lovers' killer
+  hook.Add("EntityTakeDamage", "ttt2_revenger_revenge_damage", function(target, dmginfo)
+    -- make sure the lover killer exists before we do any math
+    if loverKiller == nil then return end
+
+    -- get the attacker
+    local attacker = dmginfo:GetAttacker()
+
+    -- make sure the attacker is valid and also the attacker must be an revenger
+    if not IsValid(target) or not target:IsPlayer() then return end
+    if not IsValid(attacker) or not attacker:IsPlayer() then return end
+    if not attacker:GetSubRole() == ROLE_REVENGER then return end
+    
+    if target == loverKiller then
+      dmginfo:SetDamage(dmginfo:GetDamage() * 1.5)
+    end
+  end)
+end
+
+-- actual wallhacks part DONT TOUCH
+if CLIENT then
+	local TryT = LANG.TryTranslation
+	local ParT = LANG.GetParamTranslation
+
+	local materialRat = Material("vgui/ttt/dynamic/roles/icon_rvng.vmt")
+
+	hook.Add("TTT2RenderMarkerVisionInfo", "HUDDrawMarkerVisionRatPlayer", function(mvData)
+		local ent = mvData:GetEntity()
+		local mvObject = mvData:GetMarkerVisionObject()
+
+    if not mvObject:IsObjectFor(ent, "mv_revenger") then return end
+
+		local distance = math.Round(util.HammerUnitsToMeters(mvData:GetEntityDistance()), 1)
+
+		mvData:EnableText()
+
+		mvData:AddIcon(materialRat)
+		mvData:SetTitle("Your lover, " .. ent:Nick())
+
+		mvData:AddDescriptionLine(ParT("marker_vision_distance", {distance = distance}))
+		mvData:AddDescriptionLine(TryT(mvObject:GetVisibleForTranslationKey()), COLOR_SLATEGRAY)
+	end)
 end
