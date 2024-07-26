@@ -95,7 +95,9 @@ if SERVER then
     loverKiller = nil
   end)
   hook.Add("TTTEndRound", "RevengerEndRound", function()
-    loverPly:RemoveMarkerVision("mv_revenger")
+	if loverPly ~= nil then
+		loverPly:RemoveMarkerVision("mv_revenger")
+	end
     loverPly = nil
     revengerPly = nil
     loverKiller = nil
