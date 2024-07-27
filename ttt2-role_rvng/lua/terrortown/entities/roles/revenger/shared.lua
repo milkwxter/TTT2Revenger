@@ -47,6 +47,12 @@ if SERVER then
       end
     end
 
+    -- check if the list is less than 1
+    if #innocentMinusRevengerList < 1 then
+      EPOP:AddMessage(revengerPly, {text = "ERROR! Not enough players to find a suitable lover!", color = REVENGER.color}, "Please report this.", 6, true)
+      return
+    end
+
     -- get a random index from our list
     local randomPlyNumber = math.random(#innocentMinusRevengerList)
     -- iterate through players
