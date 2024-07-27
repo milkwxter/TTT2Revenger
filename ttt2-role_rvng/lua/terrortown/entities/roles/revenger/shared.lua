@@ -77,6 +77,10 @@ if SERVER then
   hook.Add("PlayerDeath", "RevengerGetKiller", function(victim, inflictor, attacker)
     -- only print if the victim was our loverply
     if victim ~= loverPly then return end
+
+    -- remove wallhax
+    victim:RemoveMarkerVision("mv_revenger")
+
     -- only print if attacker is human
     if not IsValid(attacker) or not IsPlayer(attacker) then return end
     -- update our loverKiller value
@@ -85,8 +89,6 @@ if SERVER then
     EPOP:AddMessage(revengerPly, {text = "Your love, " .. loverPly:Nick() .. ", has died.", color = REVENGER.color}, "They were killed by " .. loverKiller:Nick() .. "!! Go get revenge!", 6, true)
     -- add a EPOP to the lover killers' screen
     EPOP:AddMessage(loverKiller, {text = "You just broke the Revenger's Heart!", color = REVENGER.color}, revengerPly:Nick() .. " now does extra damage to you. Be careful!", 6, true)
-    -- remove wallhax
-    victim:RemoveMarkerVision("mv_revenger")
   end)
 
   -- Reset stuff on death and rolechange and round begin/end
